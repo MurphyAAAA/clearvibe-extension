@@ -17,6 +17,16 @@ npm install --save-dev typescript @types/chrome
 ```bash
 npx tsc --init
 ```
+
+4. 安装 React 和 Vite 依赖
+```bash
+# 安装 React 运行时核心包
+npm install react react-dom
+
+# 安装 Vite 构建工具及相关的 TypeScript 类型声明 (作为开发依赖)
+npm install --save-dev vite @vitejs/plugin-react @types/react @types/react-dom
+```
+
 ### 修改 package.json
 Node.js 默认把项目当成老式的 CommonJS 模块（使用 require()）。但是，我们的架构基于 Vite + React，并且 TS 开启了 verbatimModuleSyntax，这要求项目必须是现代的 ECMAScript 模块（ESM，使用 import/export）。
 操作步骤：
