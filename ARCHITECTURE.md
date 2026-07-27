@@ -41,6 +41,10 @@ clear-vibe/
 │       │   ├── icons/                     # 扩展图标 (16/48/128px)
 │       │   └── manifest.json              # MV3 核心清单 (定义 action, background, permissions)
 │       ├── src/
+│       │   ├── adapters/                  # 专门用于存放“为核心业务层注入的特定环境实现代码”
+│       │   │   ├── image_adapter.ts       # settings_adapter 和 image_adapter 既需要被 popup (存数据) 调用，又需要被 new_tab (读数据) 调用
+│       │   │   └── settings_adapter.ts    # 
+│       │   │
 │       │   ├── new_tab/                   # 【入口 1】新标签页 (React SPA)
 │       │   │   ├── new_tab.html           # Vite 构建入口 / React 挂载点 (<div id="root">)
 │       │   │   ├── new_tab_main.tsx       # React 渲染入口 (createRoot)
