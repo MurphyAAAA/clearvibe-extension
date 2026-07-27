@@ -36,52 +36,52 @@
 ```text
 clear-vibe/
 ├── apps/
-│   └── web-extension/                     # 【宿主层】Chrome/Edge MV3 扩展环境
+│   └── web_extension/                     # 【宿主层】Chrome/Edge MV3 扩展环境
 │       ├── public/                        # 静态资源 (Vite 自动打包到根目录)
 │       │   ├── icons/                     # 扩展图标 (16/48/128px)
 │       │   └── manifest.json              # MV3 核心清单 (定义 action, background, permissions)
 │       ├── src/
-│       │   ├── new-tab/                   # 【入口 1】新标签页 (React SPA)
-│       │   │   ├── new-tab.html           # Vite 构建入口 / React 挂载点 (<div id="root">)
-│       │   │   ├── new-tab-main.tsx       # React 渲染入口 (createRoot)
+│       │   ├── new_tab/                   # 【入口 1】新标签页 (React SPA)
+│       │   │   ├── new_tab.html           # Vite 构建入口 / React 挂载点 (<div id="root">)
+│       │   │   ├── new_tab_main.tsx       # React 渲染入口 (createRoot)
 │       │   │   ├── NewTabApp.tsx          # React 根组件 (在此调用 packages 的能力)
-│       │   │   └── new-tab.css            # 该入口专属全局样式
+│       │   │   └── new_tab.css            # 该入口专属全局样式
 │       │   │
-│       │   ├── content-script/            # 【入口 2】注入 Google 网页的脚本 (无 React UI，纯 DOM 操作)
-│       │   │   ├── google-content-script.ts # 核心注入逻辑 (调用 packages/vibe-effects)
-│       │   │   └── google-content-script.css# 注入到目标网页的纯净样式
+│       │   ├── content_script/            # 【入口 2】注入 Google 网页的脚本 (无 React UI，纯 DOM 操作)
+│       │   │   ├── google_content_script.ts # 核心注入逻辑 (调用 packages/vibe_effects)
+│       │   │   └── google_content_script.css# 注入到目标网页的纯净样式
 │       │   │
 │       │   ├── popup/                     # 【入口 3】扩展图标点击弹窗 (React SPA)
 │       │   │   ├── popup.html             # Vite 构建入口 / React 挂载点
-│       │   │   ├── popup-main.tsx         # React 渲染入口
+│       │   │   ├── popup_main.tsx         # React 渲染入口
 │       │   │   ├── PopupApp.tsx           # React 根组件 (设置面板、图片上传 UI)
 │       │   │   └── popup.css              # 弹窗专属样式
 │       │   │
 │       │   └── background/                # 【入口 4】MV3 Service Worker (后台守护进程)
-│       │       └── service-worker.ts      # 处理扩展级事件 (如安装、网络请求拦截)、无 DOM 访问权限
+│       │       └── service_worker.ts      # 处理扩展级事件 (如安装、网络请求拦截)、无 DOM 访问权限
 │       │
 │       ├── vite.config.ts                 # Vite 构建配置 (多入口 rollupOptions 配置)
 │       ├── tsconfig.json                  # React + 宿主环境的 TS 配置
 │       └── package.json                   # 宿主依赖 (React, Vite 等)
 │
 ├── packages/                              # 【核心业务层】纯净的 TS 环境，与 React/浏览器环境解耦
-│   ├── core-settings/                     # 【状态层】配置管理
+│   ├── core_settings/                     # 【状态层】配置管理
 │   │   ├── src/
-│   │   │   ├── settings-manager.ts        # 配置管理逻辑 (依赖注入 storageAdapter)
+│   │   │   ├── settings_manager.ts        # 配置管理逻辑 (依赖注入 storageAdapter)
 │   │   │   └── types.ts                   # 配置项的 TS 接口定义
 │   │   ├── tsconfig.json
 │   │   └── package.json
 │   │
-│   ├── core-storage/                      # 【数据层】资产存储
+│   ├── core_storage/                      # 【数据层】资产存储
 │   │   ├── src/
-│   │   │   ├── storage-manager.ts         # 图片流处理与存储调度 (依赖注入 indexedDB/MV3 适配器)
+│   │   │   ├── storage_manager.ts         # 图片流处理与存储调度 (依赖注入 indexedDB/MV3 适配器)
 │   │   │   └── types.ts                   # 存储相关 TS 接口
 │   │   ├── tsconfig.json
 │   │   └── package.json
 │   │
-│   └── vibe-effects/                      # 【渲染层】视觉特效引擎
+│   └── vibe_effects/                      # 【渲染层】视觉特效引擎
 │       ├── src/
-│       │   ├── effect-engine.ts           # 纯函数计算：接收配置与图片 URL，返回 CSS Mask 等样式规则
+│       │   ├── effect_engine.ts           # 纯函数计算：接收配置与图片 URL，返回 CSS Mask 等样式规则
 │       │   └── types.ts                   # 特效参数 TS 接口
 │       ├── tsconfig.json
 │       └── package.json
@@ -91,9 +91,9 @@ clear-vibe/
 ```
 
 ### 目录与技术栈的设计映射关系说明：
-1. **React 的边界**：在这个架构中，React 仅存在于 `apps/web-extension/src/new-tab` 和 `popup` 中，作为**UI 呈现层**。核心的存储逻辑、特效计算（`packages/`）绝对不能包含任何 React 代码或 Hook（如 `useState`）。这保证了如果未来你要用 Vue 或者原生桌面环境，`packages/` 完全不需改动。
+1. **React 的边界**：在这个架构中，React 仅存在于 `apps/web_extension/src/new_tab` 和 `popup` 中，作为**UI 呈现层**。核心的存储逻辑、特效计算（`packages/`）绝对不能包含任何 React 代码或 Hook（如 `useState`）。这保证了如果未来你要用 Vue 或者原生桌面环境，`packages/` 完全不需改动。
 2. **Vite 多入口**：扩展有三个独立的 HTML 页面/运行环境（Popup, New Tab, Content Script）。在 `vite.config.ts` 中必须通过 Rollup 的多入口（Multiple Entry Points）进行分别打包。
-3. **Manifest V3 的限制**：`background/service-worker.ts` 在 MV3 中没有 DOM 访问权限，因此它绝不能直接调用 `packages/vibe-effects` 去操作 DOM，它只能作为后台事件中转站。这也是为什么文件结构必须将其与其他 UI 入口严格隔离开。
+3. **Manifest V3 的限制**：`background/service_worker.ts` 在 MV3 中没有 DOM 访问权限，因此它绝不能直接调用 `packages/vibe_effects` 去操作 DOM，它只能作为后台事件中转站。这也是为什么文件结构必须将其与其他 UI 入口严格隔离开。
 
 ### 层级规范：
 *   **宿主层 (`apps/`)**：负责“与世界交互”。所有的平台特有 API（如 `chrome.storage`, `window`, `document`）只能生存在这一层。
@@ -113,14 +113,14 @@ clear-vibe/
 
 ### 推演 1：实现核心功能“边缘清晰，中央透明的氛围过渡效果”
 1.  **交互触发**：用户在 `apps/.../popup` 面板上传图片并拖动透明度滑块。
-2.  **数据流转**：`popup` 调用 `packages/core-storage` 处理图片逻辑，但向其传入 Web 环境的 Storage Adapter 完成物理存盘；同时调用 `packages/core-settings` 更新特效配置参数。
-3.  **渲染呈现**：用户打开 `apps/.../new_tab`。该页面读取出配置和图片，将其作为**纯数据**传入 `packages/vibe-effects`。
-4.  **纯函数计算**：`vibe-effects` 内部的算法（无需知道当前是网页还是桌面软件）计算并返回一段包含 `mask-image: radial-gradient(...)` 的 CSS 代码字符串或样式对象。
+2.  **数据流转**：`popup` 调用 `packages/core_storage` 处理图片逻辑，但向其传入 Web 环境的 Storage Adapter 完成物理存盘；同时调用 `packages/core_settings` 更新特效配置参数。
+3.  **渲染呈现**：用户打开 `apps/.../new_tab`。该页面读取出配置和图片，将其作为**纯数据**传入 `packages/vibe_effects`。
+4.  **纯函数计算**：`vibe_effects` 内部的算法（无需知道当前是网页还是桌面软件）计算并返回一段包含 `mask-image: radial_gradient(...)` 的 CSS 代码字符串或样式对象。
 5.  **挂载**：`new_tab` 拿到这段 CSS，将其应用到自己的 DOM 上。
 
 ### 推演 2：未来新增功能“隐藏 Google 搜索结果页的广告”
-1.  **新增包**：在 `packages/` 下新建 `packages/page-cleaner`。该包暴露出纯粹的 DOM 清洗逻辑，如 `removeAdNodes(domRoot: HTMLElement)`。
-2.  **接入宿主**：在 `apps/web-extension/src/content_script`（因为广告只在特定网页存在）中引入该包。
+1.  **新增包**：在 `packages/` 下新建 `packages/page_cleaner`。该包暴露出纯粹的 DOM 清洗逻辑，如 `removeAdNodes(domRoot: HTMLElement)`。
+2.  **接入宿主**：在 `apps/web_extension/src/content_script`（因为广告只在特定网页存在）中引入该包。
 3.  **执行**：Content Script 监听到页面加载完毕，将当前的 `document` 作为参数传给 `removeAdNodes`。
 **结论**：原有的特效引擎、存储逻辑完全不用触碰，通过新增高内聚的模块在宿主层按需组装，完美符合易扩展原则。
 
@@ -130,10 +130,10 @@ clear-vibe/
 
 为保证语义清晰 (原则4)，项目强制采用以下命名规范：
 
-*   **包名 (Package Names)**：使用 `名词-名词` 或 `核心概念-职责` 格式。全小写，用连字符（kebab-case）。
-    *   🟢 正确：`vibe-effects`, `core-storage`, `page-cleaner`
-    *   🔴 错误：`utils`, `common`, `extension-logic` (过于宽泛)
-*   **文件与文件夹**：强制使用连字符格式（kebab-case），如 `apply-radial-mask.ts`。禁止在同一目录下混用驼峰和连字符。
+*   **包名 (Package Names)**：使用 `名词_名词` 或 `核心概念_职责` 格式。全小写，用下划线。
+    *   🟢 正确：`vibe_effects`, `core_storage`, `page_cleaner`
+    *   🔴 错误：`utils`, `common`, `extension_logic` (过于宽泛)
+*   **文件与文件夹**：强制使用下划线格式，如 `apply-radial-mask.ts`。禁止在同一目录下混用驼峰和下划线。
 *   **类与接口**：强制使用大驼峰（PascalCase），如 `VibeEffectEngine`, `StorageAdapter`。
 *   **函数与变量**：强制使用小驼峰（camelCase），且函数名必须为**动宾结构**，明确表达动作。
     *   🟢 正确：`generateMaskCss`, `saveUserImage`
