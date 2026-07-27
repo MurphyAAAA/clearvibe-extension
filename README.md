@@ -1,4 +1,70 @@
 # clearvibe-extension - 产品说明与开发契约
+## 基础配置
+### 构建包
+项目根目录中
+
+1. 生成packages.json
+```bash
+npm init -y
+```
+
+2. 本地安装 TS 和 Chrome 类型包
+```bash
+npm install --save-dev typescript @types/chrome
+```
+
+3. 生成并配置tsconfig.json
+```bash
+npx tsc --init
+```
+### 修改 package.json
+Node.js 默认把项目当成老式的 CommonJS 模块（使用 require()）。但是，我们的架构基于 Vite + React，并且 TS 开启了 verbatimModuleSyntax，这要求项目必须是现代的 ECMAScript 模块（ESM，使用 import/export）。
+操作步骤：
+打开根目录刚生成的 package.json，在最外层添加一行 "type": "module"，并顺便配置好 Monorepo 的工作区（Workspaces），让 npm 认识 apps/ 和 packages/ 目录。
+请修改你的根目录 package.json 如下：
+```json
+{
+  // 其他 ...
+
+  "main": "index.js",
+  "type": "module", 
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  
+  // 其他 ...
+}
+```
+
+### 调整 tsconfig
+在 Vite 环境下，项目是由 Bundler（打包器）来处理模块的，而不是由 Node.js 直接运行的。NodeNext 标准会强制进行非常复杂的 CommonJS/ESM 校验，导致 export class 被误判。
+修复步骤：
+我们需要把 TypeScript 的模块解析策略切换为现代前端 Vite 专用的 "bundler" 模式。这不仅能彻底解决这个报错，还能让你在写 import 语句时不需要加上扩展名（如 .ts 或 .js）。
+tsconfig.json，修改 "compilerOptions" 中的以下两行：
+```json
+{
+  "compilerOptions": {
+    // 1. 将 "module": "nodenext" 改为：
+    "module": "ESNext",
+    
+    // 2. 新增下面这一行，告诉 TS 我们使用 Vite 等现代打包工具：
+    "moduleResolution": "bundler",
+
+    // ... 保持其他配置不变 ...
+    "target": "esnext",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "types": ["chrome"],
+    "strict": true,
+    "jsx": "react-jsx",
+    "verbatimModuleSyntax": true,
+    // ...
+  }
+}
+```
+修改完 tsconfig.json 后，由于 VSCode 等编辑器的 TypeScript 服务器有缓存，有时候不会立刻生效。
+如果你用的是 VSCode：请按下 Ctrl + Shift + P (Mac 是 Cmd + Shift + P)，输入 Restart TS Server (重启 TS 服务器)，点击执行。或者直接关掉 VSCode 重新打开。
+
 
 ## 0. 文档边界与角色定义 (Document Boundary)
 
