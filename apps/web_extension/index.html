@@ -4,13 +4,14 @@
         <meta charset="UTF-8" />
         <title>Clear Vibe MVP</title>
         <style>
-        /* 简单的全局样式重置，保证背景能铺满全屏 */
-        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }
+        /* 【修改】必须给 Chrome Popup 明确的像素宽高，最大一般是 800x600 */
+        body, html { margin: 0; padding: 0; width: 600px; height: 500px; overflow: hidden; }
         #root { width: 100%; height: 100%; }
         </style>
     </head>
     <body>
         <div id="root"></div>
+        <!-- 注意：这里的路径 Vite 打包时会自动处理，无需更改 -->
         <script type="module" src="/src/new_tab/new_tab_main.tsx"></script>
     </body>
 </html>
