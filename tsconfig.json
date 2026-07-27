@@ -37,6 +37,9 @@
     // "noFallthroughCasesInSwitch": true,
     // "noPropertyAccessFromIndexSignature": true,
 
+    "esModuleInterop": true,
+      "allowSyntheticDefaultImports": true,
+
     // Recommended Options
     "jsx": "react-jsx",
     // 需要在导入时显示添加type,可以让加快 vite 打包速度
