@@ -3,7 +3,7 @@
  * 特效引擎是一个绝对纯净的计算模块，不需要任何存储适配器，只需要明确的输入（图片、参数）和输出（CSS 样式）。
  */
 
-import type { VibeConfig } from "../../core_settings/src/types.ts";
+import type { VibeConfig } from "@clear-vibe/core_settings/src/types.ts";
 /**
  * 传递给特效生成器的参数模型
  * 故意将 VibeConfig 中的 imageId 剔除，因为渲染层不关心 ID，只关心真实的渲染材料（URL/Base64）

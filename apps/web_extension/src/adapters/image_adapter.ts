@@ -2,7 +2,7 @@
  * apps/web_extension/src/adapters/image_adapter.ts
  * 高清图片如果在 Chrome Extension 里存成 Base64，很容易打爆 chrome.storage 的配额限制。因此，我们在适配器里封装了浏览器标准的 IndexedDB
  */
-import type { IImageStorageAdapter } from '../../../../packages/core_storage/src/types.ts';
+import type { IImageStorageAdapter } from '@clear-vibe/core_storage/src/types.ts';
 
 /**
  * 基于浏览器 IndexedDB 的高清图片存储适配器

@@ -2,7 +2,7 @@
  * apps/web_extension/src/adapters/settings_adapter.ts
  * 这是位于宿主 App 层的代码，它封装了 Chrome 特有的 API chrome.storage.local，用于给核心层打工。
  */
-import type { ISettingsStorageAdapter, VibeConfig } from '../../../../packages/core_settings/src/types.ts';
+import type { ISettingsStorageAdapter, VibeConfig } from '@clear-vibe/core_settings/src/types.ts';
 
 /**
  * Chrome 扩展环境下的配置存储适配器
