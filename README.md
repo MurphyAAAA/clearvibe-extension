@@ -75,6 +75,14 @@ tsconfig.json，修改 "compilerOptions" 中的以下两行：
 修改完 tsconfig.json 后，由于 VSCode 等编辑器的 TypeScript 服务器有缓存，有时候不会立刻生效。
 如果你用的是 VSCode：请按下 Ctrl + Shift + P (Mac 是 Cmd + Shift + P)，输入 Restart TS Server (重启 TS 服务器)，点击执行。或者直接关掉 VSCode 重新打开。
 
+### pnpm构建包
+在根目录
+```bash
+pnpm install
+
+```
+
+
 
 ## 0. 文档边界与角色定义 (Document Boundary)
 

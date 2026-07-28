@@ -1,15 +1,13 @@
 {
   "name": "clearvibe-extension",
   "version": "1.0.0",
+  "private": true, 
   "description": "",
-  "main": "index.js",
   "type": "module",
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "pnpm --filter @clear-vibe/web_extension dev",
+    "build": "pnpm --filter @clear-vibe/web_extension build"
   },
   "keywords": [],
   "author": "",

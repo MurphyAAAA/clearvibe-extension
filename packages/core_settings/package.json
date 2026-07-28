@@ -1,0 +1,5 @@
+{
+  "name": "@clear-vibe/core_settings",
+  "version": "1.0.0",
+  "main": "src/types.ts"
+}

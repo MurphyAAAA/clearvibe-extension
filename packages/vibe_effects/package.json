@@ -1,0 +1,8 @@
+{
+  "name": "@clear-vibe/vibe_effects",
+  "version": "1.0.0",
+  "main": "src/effect_engine.ts",
+  "dependencies": {
+    "@clear-vibe/core_settings": "workspace:*" 
+  }
+}

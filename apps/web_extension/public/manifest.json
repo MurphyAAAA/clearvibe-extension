@@ -3,6 +3,9 @@
   "name": "Clear Vibe MVP",
   "version": "1.0",
   "permissions": ["storage"],
+  "action": {
+    "default_popup": "src/popup/popup.html"
+  },
   "chrome_url_overrides": {
     "newtab": "index.html"
   }

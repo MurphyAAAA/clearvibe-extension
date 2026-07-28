@@ -1,0 +1,5 @@
+# pnpm-workspace.yaml
+# 定义哪些目录下的文件夹应该被视为 workspace 的子包
+packages:
+  - 'apps/*'
+  - 'packages/*'
