@@ -34,6 +34,7 @@ export class ChromeSettingsAdapter implements ISettingsStorageAdapter {
     }
 
     public async saveConfig(inputConfig: VibeConfig): Promise<void> {
+        // 调用chrome api,将设置保存到浏览器本地缓存
         return new Promise((resolve, reject) => {
             const dataToSave = { [this.STORAGE_KEY]: inputConfig };
             chrome.storage.local.set(dataToSave, () => {
