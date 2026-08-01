@@ -1,50 +1,86 @@
 # clearvibe-extension - 产品说明与开发契约
 ## 基础配置
 ### 构建包
-项目根目录中
+本项目使用 **pnpm workspace** 管理依赖。根目录已包含 `package.json`、`pnpm-workspace.yaml` 和 `pnpm-lock.yaml`，因此克隆项目后**不要**再执行 `npm init`，也不要混用 npm 或生成 `package-lock.json`。
 
-1. 生成packages.json
+#### 环境要求
+
+- Node.js：`^20.19.0` 或 `>=22.12.0`（当前 Vite 8 的要求）。建议安装 [Node.js LTS](https://nodejs.org/en/download) 的 Windows Installer，并在安装完成后关闭、重新打开 PowerShell，使 PATH 更新生效。
+- pnpm：执行 `pnpm --version` 确认可用。
+
+在 Windows 上完成 Node.js LTS 安装并重新打开 PowerShell 后，依次执行：
+
 ```bash
-npm init -y
+# 确认 Node.js 已升级到项目所需版本
+node --version
+
+# 安装 pnpm 11（本项目当前使用 pnpm 11 生成锁文件）
+npm install --global pnpm@11
+
+# 确认 pnpm 已加入 PATH
+pnpm --version
 ```
 
-2. 本地安装 TS 和 Chrome 类型包
+若 `node --version` 仍显示旧版本或 `pnpm` 仍提示“未识别”，请关闭所有 PowerShell 窗口后重新打开；仍无效时，重启 Windows 后再检查。不要在 Node.js 16 环境中安装或构建本项目。
+
+#### 安装依赖与构建
+
+在项目根目录执行：
+
 ```bash
-npm install --save-dev typescript @types/chrome
+# 按 pnpm-lock.yaml 安装全部 workspace 依赖
+pnpm install --frozen-lockfile
+
+# 构建浏览器扩展
+pnpm run build
 ```
 
-3. 生成并配置tsconfig.json
+#### 可选：网页 UI 预览
+
 ```bash
-npx tsc --init
+# 启动 apps/web_extension 的本地 Vite 开发服务器；不会生成 dist
+pnpm run dev
 ```
 
-4. 安装 React 和 Vite 依赖
-```bash
-# 安装 React 运行时核心包
-npm install react react-dom
+该命令通常会在 `http://localhost:5173` 启动普通网页服务器（端口被占用时会自动改用其他端口）：浏览器访问页面时，Vite 按需编译 TypeScript/React，并在修改页面代码后自动刷新。这只适合预览不依赖扩展 API 的 UI，不能代替扩展调试；它不会执行构建，也不会生成可加载的扩展包。
 
-# 安装 Vite 构建工具及相关的 TypeScript 类型声明 (作为开发依赖)
-npm install --save-dev vite @vitejs/plugin-react @types/react @types/react-dom
+#### 在 Chrome 中调试扩展
+
+需要验证 Popup、新标签页或 `chrome.storage` 等扩展 API 时，每次修改后执行：
+
+```bash
+pnpm run build
 ```
+
+然后打开 `chrome://extensions`，开启“开发者模式”，点击“加载已解压的扩展程序”，选择 `apps/web_extension/dist`。之后每次重新构建，回到该页面点击扩展的刷新按钮，再测试更新后的功能。当前 Vite 配置未集成扩展专用的热更新插件，因此 `pnpm run dev` 不会自动更新已加载的 Chrome 扩展。
+
+仅在需要新增依赖时才使用 `pnpm add`（运行时依赖）或 `pnpm add -D`（开发依赖）；已有依赖无需重复安装。
+
+`pnpm build` 与 `pnpm run build` 等价，前者是 pnpm 对同名脚本提供的简写(指令运行时会自动补充 run)。为明确表示正在执行 `package.json` 中的脚本，本文档统一使用 `pnpm run <脚本名>`。
 
 ### 修改 package.json
 Node.js 默认把项目当成老式的 CommonJS 模块（使用 require()）。但是，我们的架构基于 Vite + React，并且 TS 开启了 verbatimModuleSyntax，这要求项目必须是现代的 ECMAScript 模块（ESM，使用 import/export）。
 操作步骤：
-打开根目录刚生成的 package.json，在最外层添加一行 "type": "module"，并顺便配置好 Monorepo 的工作区（Workspaces），让 npm 认识 apps/ 和 packages/ 目录。
-请修改你的根目录 package.json 如下：
+打开根目录的 `package.json`，在最外层设置 `"type": "module"`。pnpm 的 workspace 范围由根目录的 `pnpm-workspace.yaml` 配置，而不是 `package.json` 的 `workspaces` 字段。
+
+`package.json` 中应包含：
 ```json
 {
   // 其他 ...
 
   "main": "index.js",
-  "type": "module", 
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ],
+  "type": "module",
   
   // 其他 ...
 }
+```
+
+`pnpm-workspace.yaml` 应配置为：
+
+```yaml
+packages:
+  - 'apps/*'
+  - 'packages/*'
 ```
 
 ### 调整 tsconfig
@@ -74,15 +110,6 @@ tsconfig.json，修改 "compilerOptions" 中的以下两行：
 ```
 修改完 tsconfig.json 后，由于 VSCode 等编辑器的 TypeScript 服务器有缓存，有时候不会立刻生效。
 如果你用的是 VSCode：请按下 Ctrl + Shift + P (Mac 是 Cmd + Shift + P)，输入 Restart TS Server (重启 TS 服务器)，点击执行。或者直接关掉 VSCode 重新打开。
-
-### pnpm构建包
-在根目录
-```bash
-pnpm install
-
-```
-
-
 
 ## 0. 文档边界与角色定义 (Document Boundary)
 

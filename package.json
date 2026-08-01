@@ -6,8 +6,8 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "pnpm --filter @clear-vibe/web_extension dev",
-    "build": "pnpm --filter @clear-vibe/web_extension build"
+    "dev": "pnpm --filter @clear-vibe/web_extension run dev",
+    "build": "pnpm --filter @clear-vibe/web_extension run build"
   },
   "keywords": [],
   "author": "",
