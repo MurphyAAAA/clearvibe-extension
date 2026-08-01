@@ -1,62 +1,195 @@
 # clearvibe-extension - 产品说明与开发契约
 ## 基础配置
 ### 构建包
-本项目使用 **pnpm workspace** 管理依赖。根目录已包含 `package.json`、`pnpm-workspace.yaml` 和 `pnpm-lock.yaml`，因此克隆项目后**不要**再执行 `npm init`，也不要混用 npm 或生成 `package-lock.json`。
+本项目是一个 pnpm Monorepo。把它理解为：Node.js 负责运行工具，pnpm 负责管理依赖，Vite 负责把源码打成 Chrome 能加载的扩展目录。
 
-#### 环境要求
+```mermaid
+flowchart LR
+  A["package.json：声明依赖与脚本"] --> C["pnpm install：安装依赖"]
+  B["pnpm-lock.yaml：锁定精确版本"] --> C
+  D["pnpm-workspace.yaml：识别子包"] --> C
+  C --> E["node_modules：本地开发依赖"]
+  E --> F["pnpm run build"]
+  F --> G["Vite 打包"]
+  G --> H["apps/web_extension/dist"]
+  H --> I["Chrome：加载已解压的扩展程序"]
+```
 
-- Node.js：`^20.19.0` 或 `>=22.12.0`（当前 Vite 8 的要求）。建议安装 [Node.js LTS](https://nodejs.org/en/download) 的 Windows Installer，并在安装完成后关闭、重新打开 PowerShell，使 PATH 更新生效。
-- pnpm：执行 `pnpm --version` 确认可用。
+#### 先认识当前项目的文件
 
-在 Windows 上完成 Node.js LTS 安装并重新打开 PowerShell 后，依次执行：
+| 文件 | 它解决的问题 | 当前项目中的作用 |
+| --- | --- | --- |
+| 根 `package.json` | 需要哪些依赖、有哪些命令 | 声明 React、Vite、TypeScript，并定义 `dev`、`build` 命令。 |
+| `pnpm-workspace.yaml` | 哪些目录属于同一 Monorepo | 将 `apps/*` 与 `packages/*` 下的目录识别为子包。它需要手动维护，不由 pnpm 自动创建。 |
+| `pnpm-lock.yaml` | 每个依赖到底使用哪个版本 | 由 pnpm 在首次解析依赖时自动生成/更新，保证每台电脑安装相同版本。 |
+| `apps/web_extension/package.json` | 扩展前端子包的命令 | `build` 实际运行 `vite build`。 |
+| `apps/web_extension/vite.config.ts` | Vite 如何打包 | 配置新标签页与 Popup 的入口，输出目录为 `dist`。 |
+| `apps/web_extension/public/manifest.json` | Chrome 如何识别扩展 | 定义扩展名、权限、Popup 和新标签页入口。 |
+
+#### 一次性准备系统环境
+
+本项目锁定的 Vite 8 要求 Node.js 为 `^20.19.0` 或 `>=22.12.0`。Windows 请安装 [Node.js LTS 的 x64 MSI](https://nodejs.org/en/download)，并在安装后关闭、重新打开 PowerShell，使 PATH 更新生效。
+
+在新打开的 PowerShell 中执行：
 
 ```bash
-# 确认 Node.js 已升级到项目所需版本
+# 预期为 v22 或更高版本；不要使用 Node.js 16
 node --version
+npm --version
 
-# 安装 pnpm 11（本项目当前使用 pnpm 11 生成锁文件）
+# 安装 pnpm 11；这只需要在电脑上执行一次
 npm install --global pnpm@11
-
-# 确认 pnpm 已加入 PATH
 pnpm --version
 ```
 
-若 `node --version` 仍显示旧版本或 `pnpm` 仍提示“未识别”，请关闭所有 PowerShell 窗口后重新打开；仍无效时，重启 Windows 后再检查。不要在 Node.js 16 环境中安装或构建本项目。
+如果 `pnpm` 仍显示“未识别”，关闭所有 PowerShell 窗口后重新打开；仍无效时重启 Windows。不要在此项目中混用 npm 或生成 `package-lock.json`。
 
-#### 安装依赖与构建
+#### 路径 A：从零创建一个可构建的扩展项目
 
-在项目根目录执行：
+这条路径只用于空目录。目标不是立刻得到完整功能，而是依次创建“依赖声明 → 构建配置 → 扩展源码 → 可加载的 `dist`”所需的基础文件。pnpm 不会替你生成 React 页面、Chrome 清单或 Vite 配置；它只管理包和执行脚本。
+
+1. 创建根包：
+
+   ```bash
+   pnpm init --bare --init-type module
+   ```
+
+   **为什么**：创建根 `package.json`，它是整个项目的依赖清单与命令入口；`--init-type module` 表示使用现代 ESM 的 `import` / `export`。
+
+   **结果**：根目录出现 `package.json`，但此时既没有依赖，也不能构建。
+
+2. 手动建立 Monorepo 结构并声明 workspace：
+
+   ```text
+   项目根目录/
+   ├── apps/web_extension/     # Chrome 扩展这个实际可运行的应用
+   ├── packages/               # 可被多个应用复用的本地包
+   └── pnpm-workspace.yaml
+   ```
+
+   在根目录手动创建 `pnpm-workspace.yaml`：
+
+   ```yaml
+   packages:
+     - 'apps/*'
+     - 'packages/*'
+   ```
+
+   **为什么**：pnpm 需要这份文件才知道哪些子目录的 `package.json` 属于同一个项目。它不会自动生成；每个子包也需要你手动创建自己的 `package.json` 并填写唯一的 `name`。
+
+   **结果**：以后子包可通过 `workspace:*` 引用本地包，例如扩展包依赖 `@clear-vibe/core_storage`。
+
+3. 配置脚本与源码入口：
+
+   - 根 `package.json` 的 `scripts.build` 用 `pnpm --filter <扩展包名> run build` 把构建请求路由到扩展子包。
+   - `apps/web_extension/package.json` 的 `scripts.build` 写为 `vite build`。
+   - 手动创建 `vite.config.ts`、`public/manifest.json`、新标签页/Popup 的 HTML 和 React 入口文件。
+
+   **为什么**：pnpm 只负责“运行名为 build 的脚本”；Vite 配置决定怎样打包；Manifest 决定 Chrome 将哪些页面作为扩展的 Popup 和新标签页。
+
+   **结果**：具备了“执行构建时要做什么”的定义，但尚没有 Vite、React 和 TypeScript 工具可执行。
+
+4. 声明并安装依赖：
 
 ```bash
-# 按 pnpm-lock.yaml 安装全部 workspace 依赖
+   # Chrome API 类型和 TypeScript 编译器
+   pnpm add -w -D typescript @types/chrome
+
+   # React 在浏览器运行时需要的包
+   pnpm add -w react react-dom
+
+   # Vite、React 插件和 React 类型，只在开发/构建阶段需要
+   pnpm add -w -D vite @vitejs/plugin-react @types/react @types/react-dom
+```
+
+   **为什么**：`pnpm add` 同时做三件事：1. 下载包、2. 把包名与版本范围自动写进根 `package.json`、3. 解析精确版本后自动创建/更新 `pnpm-lock.yaml`。`-D` 表示开发依赖；`-w` 表示写入 workspace 根包，避免 pnpm 把它当作误操作拒绝。
+
+   **结果**：出现 `node_modules` 和 `pnpm-lock.yaml`。前者给本机编译使用；后者让其他电脑能安装相同的版本。`@types/chrome` 只提供 TypeScript 类型提示，不会安装 Chrome 浏览器。
+
+5. 创建 TypeScript 配置：
+
+```bash
+   pnpm exec tsc --init
+```
+
+   然后按本 README 的“调整 tsconfig”章节，将模块解析设置为 `bundler`，并加入 `types: ["chrome"]`。
+
+   **为什么**：这让编辑器和 TypeScript 知道代码运行在浏览器/Chrome 扩展中，能识别 `chrome.storage` 等 API；Vite 负责最终打包，不由 `tsc` 直接输出扩展。
+
+   **结果**：出现 `tsconfig.json`，获得 TypeScript 检查与编辑器提示。
+
+6. 首次打包：
+
+```bash
+   pnpm run build
+```
+
+   **为什么**：根脚本最终调用 `vite build`，读取源码与 `vite.config.ts`，并将 `public` 中的静态文件（包括 `manifest.json`）带入输出目录，生成 Chrome 需要的静态文件。
+
+   **结果**：出现 `apps/web_extension/dist`，可按后文的 Chrome 步骤加载。
+
+#### 路径 B：拿到一个已经初始化的项目
+
+当前仓库已经完成路径 A：`package.json` 声明了依赖和脚本，`pnpm-workspace.yaml` 声明了子包，`pnpm-lock.yaml` 锁定了版本，源码与 Vite/Manifest 配置也已存在。因此你不应再次运行 `pnpm init` 或 `pnpm add`；只需恢复依赖并执行既有脚本。
+
+进入仓库根目录（即同时看到 `package.json`、`pnpm-workspace.yaml` 与 `pnpm-lock.yaml` 的目录），依次执行：
+
+```bash
+# 1. 严格按锁文件安装当前项目已经声明的全部依赖
 pnpm install --frozen-lockfile
 
-# 构建浏览器扩展
+# 2. 调用根目录定义的 build 脚本，生成可加载的扩展
 pnpm run build
 ```
 
-#### 可选：网页 UI 预览
+第 1 步不会“猜测”或新增 React、Vite、TypeScript。它读取根 `package.json` 已经声明的依赖，以及 `pnpm-lock.yaml` 已锁定的精确版本，安装到 `node_modules`；同时识别各 workspace 子包并把 `workspace:*` 依赖链接到对应本地包。
 
-```bash
-# 启动 apps/web_extension 的本地 Vite 开发服务器；不会生成 dist
-pnpm run dev
-```
+`--frozen-lockfile` 的含义是“锁文件不可改”。如果 `pnpm-lock.yaml` 缺失，或它与 `package.json` 不一致，命令会失败而不是悄悄升级依赖。遇到这种情况，应先确认依赖声明是否被有意修改；不要直接删除锁文件。
 
-该命令通常会在 `http://localhost:5173` 启动普通网页服务器（端口被占用时会自动改用其他端口）：浏览器访问页面时，Vite 按需编译 TypeScript/React，并在修改页面代码后自动刷新。这只适合预览不依赖扩展 API 的 UI，不能代替扩展调试；它不会执行构建，也不会生成可加载的扩展包。
+第 2 步的调用链如下：
 
-#### 在 Chrome 中调试扩展
-
-需要验证 Popup、新标签页或 `chrome.storage` 等扩展 API 时，每次修改后执行：
-
-```bash
+```text
 pnpm run build
+→ 根 package.json 的 scripts.build
+→ pnpm --filter @clear-vibe/web_extension run build
+→ apps/web_extension/package.json 的 scripts.build
+→ vite build
+→ apps/web_extension/vite.config.ts
+→ apps/web_extension/dist
 ```
 
-然后打开 `chrome://extensions`，开启“开发者模式”，点击“加载已解压的扩展程序”，选择 `apps/web_extension/dist`。之后每次重新构建，回到该页面点击扩展的刷新按钮，再测试更新后的功能。当前 Vite 配置未集成扩展专用的热更新插件，因此 `pnpm run dev` 不会自动更新已加载的 Chrome 扩展。
+其中 `pnpm build` 是 `pnpm run build` 的简写；本文档使用后者，明确表示“执行 `package.json` 的脚本”。构建成功后，可以检查产物目录：
 
-仅在需要新增依赖时才使用 `pnpm add`（运行时依赖）或 `pnpm add -D`（开发依赖）；已有依赖无需重复安装。
+```powershell
+Get-ChildItem .\apps\web_extension\dist
+Test-Path .\apps\web_extension\dist\manifest.json
+```
 
-`pnpm build` 与 `pnpm run build` 等价，前者是 pnpm 对同名脚本提供的简写(指令运行时会自动补充 run)。为明确表示正在执行 `package.json` 中的脚本，本文档统一使用 `pnpm run <脚本名>`。
+预期第二条命令返回 `True`。`dist` 是最终给 Chrome 加载的文件；`node_modules` 只是本地构建时使用的依赖，不能直接作为扩展加载。
+
+#### 在 Chrome 中加载并验证扩展
+
+1. 在地址栏打开 `chrome://extensions`。
+2. 打开右上角的“开发者模式”。
+3. 点击“加载已解压的扩展程序”。
+4. 选择 `apps/web_extension/dist` 目录，而不是仓库根目录，也不是 `node_modules`。
+5. 打开扩展 Popup 或新建标签页，验证功能。
+
+日常修改代码后的流程固定为：
+
+```text
+修改 TypeScript / React / CSS
+→ pnpm run build
+→ chrome://extensions 点击该扩展的“刷新”按钮
+→ 重新打开 Popup 或新建标签页进行验证
+```
+
+#### 可选：`pnpm run dev` 是什么
+
+`pnpm run dev` 最终执行子包中的 `vite`，启动一个普通网页本地服务器，通常地址为 `http://localhost:5173`（端口被占用时会换用其他端口）。访问 `/` 时预览新标签页页面；访问 `/src/popup/popup.html` 时预览 Popup 页面。Vite 会按需编译 React/TypeScript，并在保存页面代码时自动刷新浏览器。
+
+它不会生成 `dist`，也不是 Chrome 扩展运行环境。当前项目没有接入扩展专用热更新插件，因此 `pnpm run dev` 不会自动刷新已加载的扩展；依赖 `chrome.storage` 等扩展 API 的功能也应以“构建后在 Chrome 中加载”作为最终验证。若不需要单独调试纯 UI，可以完全不使用 `pnpm run dev`。
+
 
 ### 修改 package.json
 Node.js 默认把项目当成老式的 CommonJS 模块（使用 require()）。但是，我们的架构基于 Vite + React，并且 TS 开启了 verbatimModuleSyntax，这要求项目必须是现代的 ECMAScript 模块（ESM，使用 import/export）。
