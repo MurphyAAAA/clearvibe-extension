@@ -1,3 +1,5 @@
+Agent 无需阅读，修改本文件。
+
 编译
 ```bash
 npx vite build apps/web_extension/
