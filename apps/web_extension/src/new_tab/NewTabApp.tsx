@@ -29,35 +29,52 @@ export const MvpApp: React.FC = () => {
     // 无图片或报错时的兜底标志，决定是否渲染极简的黑色背景
     const [hasValidImage, setHasValidImage] = useState<boolean>(false);
 
+    // 抽出公共渲染逻辑
+    const applyVibeConfig = async (currentConfig: VibeConfig) =>{
+        if (!currentConfig.imageId) {
+            setHasValidImage(false);
+            return;
+        }
+        try{
+            const base64Data = await imageAdapter.getImage(currentConfig.imageId);
+            const styles = effectEngine.generateEffectStyles({
+                imageUrl: base64Data,
+                centerOpacity: currentConfig.centerOpacity,
+                edgeOpacity: currentConfig.edgeOpacity,
+                spreadRadius: currentConfig.spreadRadius
+            });
+            setEffectStyles(styles);
+            setHasValidImage(true);
+        } catch (error) {
+            console.error('[NewTab] Image fetch failed:', error);
+            setHasValidImage(false);
+        }
+    };
     // ==========================================
     // 3. 初始加载逻辑
     // ==========================================
     useEffect(() => {
-        const renderVibe = async () => {
+        const init = async () => {
             try {
                 const savedConfig = await settingsAdapter.loadConfig();
-                if (savedConfig && savedConfig.imageId) {
-                    const base64Data = await imageAdapter.getImage(savedConfig.imageId);
-                    const styles = effectEngine.generateEffectStyles({
-                        imageUrl: base64Data,
-                        centerOpacity: savedConfig.centerOpacity,
-                        edgeOpacity: savedConfig.edgeOpacity,
-                        spreadRadius: savedConfig.spreadRadius
-                    });
-                    setEffectStyles(styles);
-                    setHasValidImage(true);
-                } else {
-                    setHasValidImage(false);
+                if (savedConfig) {
+                    await applyVibeConfig(savedConfig);
                 }
             } catch (error) {
-                console.error('[NewTab] Failed to render vibe:', error);
-                setHasValidImage(false); // 强契约抛错后，兜底至无背景状态
+                console.error('[NewTab] Init failed:', error);
             } finally {
                 setLoading(false);
             }
         };
-        renderVibe();
-    }, []); // MVP 阶段暂不处理配置热更新，更改配置后刷新 New Tab 即可
+        init();
+
+        // 2. 核心：订阅配置变动，Popup 里拖动滑块或换图时，新标签页实时无缝重绘！
+        const unsubscribe = settingsAdapter.onConfigChange((newConfig: VibeConfig) => {
+            applyVibeConfig(newConfig);
+        });
+
+        return () => unsubscribe();
+    }, []);
 
     
     if (loading) return <div style={{ padding: '20px', color: '#fff' }}>Loading Vibe...</div>;

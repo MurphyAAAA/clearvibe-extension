@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from 'react';
 import { ChromeSettingsAdapter } from '../adapters/settings_adapter';
 import { IndexedDbImageAdapter } from '../adapters/image_adapter';
-// 注意：Popup 组件中不再需要引入 VibeEffectEngine，因为不需要计算渲染 CSS
 import type { VibeConfig } from '@clear-vibe/core_settings/src/types';
 
 const settingsAdapter = new ChromeSettingsAdapter();
@@ -23,14 +22,13 @@ export const PopupApp: React.FC = () => {
         const initConfig = async () => {
             try {
                 const savedConfig = await settingsAdapter.loadConfig();
-                // 严谨判断：即使存了配置，如果没有 imageId，依然视作默认状态
                 if (savedConfig && savedConfig.imageId) {
                     setConfig(savedConfig);
                 } else {
                     setConfig(DEFAULT_CONFIG);
                 }
             } catch (error) {
-                console.error('[Popup] Failed to load config:', error);
+                console.error('[Popup] Load config failed:', error);
                 setConfig(DEFAULT_CONFIG);
             } finally {
                 setLoading(false);
@@ -67,17 +65,35 @@ export const PopupApp: React.FC = () => {
     const handleReset = async () => {
         await settingsAdapter.saveConfig(DEFAULT_CONFIG);
         setConfig(DEFAULT_CONFIG);
-        alert('数据已清除，打开新标签页查看！');
+        alert('数据已清除！');
+    };
+
+    // 新增：在独立的浏览器 Tab 中打开控制面板，避开 Chrome 小弹窗上传失焦强杀的限制
+    const handleOpenInFullTab = () => {
+        if (chrome.tabs) {
+            chrome.tabs.create({ url: chrome.runtime.getURL('src/popup/popup.html') });
+        }
     };
 
     if (loading) return <div style={{ padding: '20px' }}>Loading...</div>;
 
     return (
-        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            <h3 style={{ margin: 0, color: '#333' }}>Clear Vibe 设置</h3>
+        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px', maxWidth: '400px', margin: '0 auto' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ margin: 0, color: '#333' }}>Clear Vibe 设置</h3>
+                {/* 核心体验救星：点击可在独立 Tab 打开，彻底解决上传选择框强杀弹窗的问题 */}
+                <button 
+                    onClick={handleOpenInFullTab} 
+                    style={{ fontSize: '11px', padding: '4px 8px', background: '#1677ff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                >
+                    全屏独立设置 ↗
+                </button>
+            </div>
             
             <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>1. 选择/更换背景图</label>
+                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>
+                    1. 选择/更换背景图 (建议在全屏独立设置中上传)
+                </label>
                 <input type="file" accept="image/*" onChange={handleImageUpload} style={{ width: '100%', fontSize: '12px' }} />
             </div>
 

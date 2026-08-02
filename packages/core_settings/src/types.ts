@@ -36,4 +36,11 @@ export interface ISettingsStorageAdapter {
      * @param config 完整的配置对象，强制整体覆盖以避免字段遗漏
      */
     saveConfig(config: VibeConfig): Promise<void>;
+
+    /**
+     * 订阅配置变动
+     * @param callback 当底层配置被修改时（如 Popup 中拖动滑块），触发回调并传入最新的完整配置
+     * @returns 返回一个取消订阅的清理函数（用于 React useEffect 清理）
+     */
+    onConfigChange(callback: (newConfig: VibeConfig) => void): () => void;
 }

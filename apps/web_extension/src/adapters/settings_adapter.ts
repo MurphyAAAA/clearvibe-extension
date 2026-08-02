@@ -46,4 +46,28 @@ export class ChromeSettingsAdapter implements ISettingsStorageAdapter {
             });
         });
     }
+
+    /**
+     * 实现配置订阅逻辑
+     */
+    public onConfigChange(callback: (newConfig: VibeConfig) => void): () => void {
+        const listener = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
+            // 只有当 local 存储变化，且修改的是我们的 KEY 时才响应
+            if (areaName === 'local' && this.STORAGE_KEY in changes) {
+                const newValue = changes[this.STORAGE_KEY]?.newValue;
+                if (newValue) {
+                    callback(newValue as VibeConfig);
+                }
+            }
+        };
+
+        // 绑定 Chrome 原生监听器
+        chrome.storage.onChanged.addListener(listener);
+
+        // 返回解绑函数，严格防止 React 内存泄漏
+        return () => {
+            chrome.storage.onChanged.removeListener(listener);
+        };
+    }
 }
+
