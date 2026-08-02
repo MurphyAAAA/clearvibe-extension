@@ -1,18 +1,16 @@
 /** apps/web_extension/src/popup/PopupApp.tsx */
 import React, { useEffect, useState } from 'react';
+import { SettingsManager, type VibeConfig } from '@clear-vibe/core_settings';
+import { StorageManager } from '@clear-vibe/core_storage';
 import { ChromeSettingsAdapter } from '../adapters/settings_adapter';
 import { IndexedDbImageAdapter } from '../adapters/image_adapter';
-import type { VibeConfig } from '@clear-vibe/core_settings/src/types';
 
+// 1. 宿主层实例化 Adapter，并注入到 Packages 的 Manager 中
 const settingsAdapter = new ChromeSettingsAdapter();
 const imageAdapter = new IndexedDbImageAdapter();
 
-const DEFAULT_CONFIG: VibeConfig = {
-    imageId: '',
-    centerOpacity: 0.1,
-    edgeOpacity: 1.0,
-    spreadRadius: 40
-};
+const settingsManager = new SettingsManager(settingsAdapter);
+const storageManager = new StorageManager(imageAdapter);
 
 export const PopupApp: React.FC = () => {
     const [config, setConfig] = useState<VibeConfig | null>(null);
@@ -21,15 +19,11 @@ export const PopupApp: React.FC = () => {
     useEffect(() => {
         const initConfig = async () => {
             try {
-                const savedConfig = await settingsAdapter.loadConfig();
-                if (savedConfig && savedConfig.imageId) {
-                    setConfig(savedConfig);
-                } else {
-                    setConfig(DEFAULT_CONFIG);
-                }
+                // UI 调用 Manager，不再直连 Adapter
+                const currentConfig = await settingsManager.getConfig();
+                setConfig(currentConfig);
             } catch (error) {
-                console.error('[Popup] Load config failed:', error);
-                setConfig(DEFAULT_CONFIG);
+                console.error('[Popup] Failed to load config:', error);
             } finally {
                 setLoading(false);
             }
@@ -39,7 +33,7 @@ export const PopupApp: React.FC = () => {
 
     const handleConfigChange = async (newConfig: VibeConfig) => {
         setConfig(newConfig);
-        await settingsAdapter.saveConfig(newConfig);
+        await settingsManager.saveConfig(newConfig);
     };
 
     const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -51,7 +45,8 @@ export const PopupApp: React.FC = () => {
             const base64Data = e.target?.result as string;
             const newImageId = `img_${Date.now()}`;
             try {
-                await imageAdapter.saveImage(newImageId, base64Data);
+                // 保存图片与配置统一走 Manager 管家
+                await storageManager.saveImage(newImageId, base64Data);
                 const newConfig: VibeConfig = { ...config, imageId: newImageId };
                 await handleConfigChange(newConfig);
             } catch (error) {
@@ -63,8 +58,11 @@ export const PopupApp: React.FC = () => {
     };
 
     const handleReset = async () => {
-        await settingsAdapter.saveConfig(DEFAULT_CONFIG);
-        setConfig(DEFAULT_CONFIG);
+        // 重置时存入包含空 imageId 的默认结构
+        const defaultConfig = await settingsManager.getConfig();
+        const resetConfig: VibeConfig = { ...defaultConfig, imageId: '' };
+        await settingsManager.saveConfig(resetConfig);
+        setConfig(resetConfig);
         alert('数据已清除！');
     };
 
@@ -92,7 +90,7 @@ export const PopupApp: React.FC = () => {
             
             <div>
                 <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>
-                    1. 选择/更换背景图 (建议在全屏独立设置中上传)
+                    1. 选择/更换背景图
                 </label>
                 <input type="file" accept="image/*" onChange={handleImageUpload} style={{ width: '100%', fontSize: '12px' }} />
             </div>

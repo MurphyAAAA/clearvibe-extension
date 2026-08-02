@@ -1,5 +1,5 @@
 {
   "name": "@clear-vibe/core_storage",
   "version": "1.0.0",
-  "main": "src/types.ts"
+  "main": "src/index.ts"
 }

@@ -1,24 +1,22 @@
 /** apps/web_extension/src/new_tab/NewTabApp.tsx */
 import React, { useEffect, useState } from 'react';
-import { VibeEffectEngine } from '@clear-vibe/vibe_effects/src/effect_engine';
+import { SettingsManager, type VibeConfig } from '@clear-vibe/core_settings';
+import { StorageManager } from '@clear-vibe/core_storage';
+import { VibeEffectEngine } from '@clear-vibe/vibe_effects';
 import { ChromeSettingsAdapter } from '../adapters/settings_adapter';
 import { IndexedDbImageAdapter } from '../adapters/image_adapter';
-import type { VibeConfig } from '@clear-vibe/core_settings/src/types';
 
 // ==========================================
 // 1. 依赖实例化：App 层负责提供工具并组装
 // ==========================================
 const settingsAdapter = new ChromeSettingsAdapter();
 const imageAdapter = new IndexedDbImageAdapter();
+
+const settingsManager = new SettingsManager(settingsAdapter);
+const storageManager = new StorageManager(imageAdapter);
 const effectEngine = new VibeEffectEngine();
 
-// 提取一个契约常数，作为纯净的初始状态
-const DEFAULT_CONFIG: VibeConfig = {
-    imageId: '',
-    centerOpacity: 0.1,
-    edgeOpacity: 1.0,
-    spreadRadius: 40
-};
+
 
 export const MvpApp: React.FC = () => {
     // ==========================================
@@ -36,7 +34,8 @@ export const MvpApp: React.FC = () => {
             return;
         }
         try{
-            const base64Data = await imageAdapter.getImage(currentConfig.imageId);
+            // 通过 StorageManager 提取大图数据
+            const base64Data = await storageManager.getImage(currentConfig.imageId);
             const styles = effectEngine.generateEffectStyles({
                 imageUrl: base64Data,
                 centerOpacity: currentConfig.centerOpacity,
@@ -46,7 +45,7 @@ export const MvpApp: React.FC = () => {
             setEffectStyles(styles);
             setHasValidImage(true);
         } catch (error) {
-            console.error('[NewTab] Image fetch failed:', error);
+            console.error('[NewTab] Image fetch failed via StorageManager:', error);
             setHasValidImage(false);
         }
     };
@@ -56,10 +55,9 @@ export const MvpApp: React.FC = () => {
     useEffect(() => {
         const init = async () => {
             try {
-                const savedConfig = await settingsAdapter.loadConfig();
-                if (savedConfig) {
-                    await applyVibeConfig(savedConfig);
-                }
+                // UI 调用 SettingsManager
+                const currentConfig = await settingsManager.getConfig();
+                await applyVibeConfig(currentConfig);
             } catch (error) {
                 console.error('[NewTab] Init failed:', error);
             } finally {
@@ -68,8 +66,8 @@ export const MvpApp: React.FC = () => {
         };
         init();
 
-        // 2. 核心：订阅配置变动，Popup 里拖动滑块或换图时，新标签页实时无缝重绘！
-        const unsubscribe = settingsAdapter.onConfigChange((newConfig: VibeConfig) => {
+        // 通过 SettingsManager 订阅配置变化
+        const unsubscribe = settingsManager.subscribeConfigChange((newConfig: VibeConfig) => {
             applyVibeConfig(newConfig);
         });
 
