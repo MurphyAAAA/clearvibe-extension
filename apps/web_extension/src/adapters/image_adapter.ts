@@ -2,7 +2,7 @@
  * apps/web_extension/src/adapters/image_adapter.ts
  * 高清图片如果在 Chrome Extension 里存成 Base64，很容易打爆 chrome.storage 的配额限制。因此，我们在适配器里封装了浏览器标准的 IndexedDB
  */
-import type { IImageStorageAdapter } from '@clear-vibe/core_storage/src/types.ts';
+import type { IImageStorageAdapter } from '@clear-vibe/core_storage';
 
 /**
  * 基于浏览器 IndexedDB 的高清图片存储适配器
@@ -11,24 +11,47 @@ export class IndexedDbImageAdapter implements IImageStorageAdapter {
     private readonly DB_NAME = 'clear_vibe_db';
     private readonly STORE_NAME = 'user_images';
     private readonly DB_VERSION = 1;
+    /**
+     * 同一适配器实例复用一个数据库连接，避免每次读写都创建新连接。
+     * Promise 同时复用正在进行的首次打开操作，防止并发请求重复打开数据库。
+     */
+    private databasePromise: Promise<IDBDatabase> | null = null;
 
     /**
-     * 私有辅助方法：打开数据库
+     * 打开并复用扩展 Origin 下的图片数据库。
+     * 数据库发生版本升级时主动释放旧连接，避免阻塞后续升级事务。
      */
     private async openDb(): Promise<IDBDatabase> {
-        return new Promise((resolve, reject) => {
+        if (this.databasePromise) {
+            return this.databasePromise;
+        }
+
+        this.databasePromise = new Promise((resolve, reject) => {
             const request = indexedDB.open(this.DB_NAME, this.DB_VERSION);
 
-            request.onupgradeneeded = (event) => {
-                const db = (event.target as IDBOpenDBRequest).result;
+            request.onupgradeneeded = () => {
+                const db = request.result;
                 if (!db.objectStoreNames.contains(this.STORE_NAME)) {
                     db.createObjectStore(this.STORE_NAME);
                 }
             };
 
-            request.onsuccess = (event) => resolve((event.target as IDBOpenDBRequest).result);
-            request.onerror = (event) => reject(new Error(`IndexedDB open failed: ${(event.target as IDBOpenDBRequest).error?.message}`));
+            request.onsuccess = () => {
+                const db = request.result;
+                db.onversionchange = () => {
+                    db.close();
+                    this.databasePromise = null;
+                };
+                resolve(db);
+            };
+
+            request.onerror = () => {
+                this.databasePromise = null;
+                reject(new Error(`[ImageAdapter] IndexedDB open failed: ${request.error?.message ?? 'Unknown error.'}`));
+            };
         });
+
+        return this.databasePromise;
     }
 
     public async saveImage(imageId: string, base64Data: string): Promise<void> {
@@ -36,10 +59,16 @@ export class IndexedDbImageAdapter implements IImageStorageAdapter {
         return new Promise((resolve, reject) => {
             const transaction = db.transaction(this.STORE_NAME, 'readwrite');
             const store = transaction.objectStore(this.STORE_NAME);
-            const request = store.put(base64Data, imageId); // ID作为Key存入
+            store.put(base64Data, imageId);
 
-            request.onsuccess = () => resolve();
-            request.onerror = () => reject(new Error('Failed to save image to IndexedDB.'));
+            // IDBRequest 成功不代表事务已经提交，必须等待 transaction.oncomplete。
+            transaction.oncomplete = () => resolve();
+            transaction.onerror = () => {
+                reject(new Error(`[ImageAdapter] Failed to save image: ${transaction.error?.message ?? 'Transaction failed.'}`));
+            };
+            transaction.onabort = () => {
+                reject(new Error(`[ImageAdapter] Image save was aborted: ${transaction.error?.message ?? 'Transaction aborted.'}`));
+            };
         });
     }
 
@@ -49,19 +78,30 @@ export class IndexedDbImageAdapter implements IImageStorageAdapter {
             const transaction = db.transaction(this.STORE_NAME, 'readonly');
             const store = transaction.objectStore(this.STORE_NAME);
             const request = store.get(imageId);
+            let storedImageData: unknown;
 
             request.onsuccess = () => {
-                const outResult = request.result;
-                // 强契约抛错：如果找不到图片，直接抛出异常阻断流程，禁止静默失败
-                if (!outResult) {
-                    reject(new Error(`[ImageAdapter] Image with ID '${imageId}' not found in database.`));
-                } else {
-                    resolve(outResult as string);
-                }
+                storedImageData = request.result as unknown;
             };
 
-            request.onerror = () => {
-                reject(new Error('[ImageAdapter] Failed to read from IndexedDB.'));
+            transaction.oncomplete = () => {
+                if (storedImageData === undefined) {
+                    reject(new Error(`[ImageAdapter] Image with ID '${imageId}' not found in database.`));
+                    return;
+                }
+                // 适配器保证存储结果是字符串；图片格式由核心 ImageReader 统一校验。
+                if (typeof storedImageData !== 'string') {
+                    reject(new Error(`[ImageAdapter] Invalid image data stored for imageId: '${imageId}'.`));
+                    return;
+                }
+                resolve(storedImageData);
+            };
+
+            transaction.onerror = () => {
+                reject(new Error(`[ImageAdapter] Failed to read image: ${transaction.error?.message ?? 'Transaction failed.'}`));
+            };
+            transaction.onabort = () => {
+                reject(new Error(`[ImageAdapter] Image read was aborted: ${transaction.error?.message ?? 'Transaction aborted.'}`));
             };
         });
     }

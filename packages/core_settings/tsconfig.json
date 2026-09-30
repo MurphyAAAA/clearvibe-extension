@@ -1,0 +1,5 @@
+{
+  // 配置业务仅使用平台无关的 TypeScript 类型环境。
+  "extends": "../../tsconfig.base.json",
+  "include": ["src"]
+}

@@ -1,7 +1,12 @@
 {
   "name": "@clear-vibe/vibe_effects",
   "version": "1.0.0",
+  "type": "module",
   "main": "src/index.ts",
+  "exports": "./src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
   "dependencies": {
     "@clear-vibe/core_settings": "workspace:*" 
   }

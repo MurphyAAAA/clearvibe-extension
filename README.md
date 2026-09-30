@@ -19,11 +19,11 @@ flowchart LR
 
 | 文件 | 它解决的问题 | 当前项目中的作用 |
 | --- | --- | --- |
-| 根 `package.json` | 需要哪些依赖、有哪些命令 | 声明 React、Vite、TypeScript，并定义 `dev`、`build` 命令。 |
+| 根 `package.json` | 统一工具与工作区命令 | 声明 TypeScript，并定义 `dev`、`build`、`typecheck` 命令。 |
 | `pnpm-workspace.yaml` | 哪些目录属于同一 Monorepo | 将 `apps/*` 与 `packages/*` 下的目录识别为子包。它需要手动维护，不由 pnpm 自动创建。 |
 | `pnpm-lock.yaml` | 每个依赖到底使用哪个版本 | 由 pnpm 在首次解析依赖时自动生成/更新，保证每台电脑安装相同版本。 |
-| `apps/web_extension/package.json` | 扩展前端子包的命令 | `build` 实际运行 `vite build`。 |
-| `apps/web_extension/vite.config.ts` | Vite 如何打包 | 配置新标签页与 Popup 的入口，输出目录为 `dist`。 |
+| `apps/web_extension/package.json` | 扩展应用依赖与命令 | 声明 React、Chrome 类型、Vite 与 CRXJS；`build` 运行 `vite build`。 |
+| `apps/web_extension/vite.config.ts` | Vite 如何打包 | CRXJS 从 Manifest 读取扩展入口，输出目录为 `dist`。 |
 | `apps/web_extension/public/manifest.json` | Chrome 如何识别扩展 | 定义扩展名、权限、Popup 和新标签页入口。 |
 
 #### 一次性准备系统环境
@@ -92,17 +92,17 @@ pnpm --version
 4. 声明并安装依赖：
 
 ```bash
-   # Chrome API 类型和 TypeScript 编译器
-   pnpm add -w -D typescript @types/chrome
+   # 公共 TypeScript 编译器，供各工作区包进行类型检查
+   pnpm add -w -D typescript
 
    # React 在浏览器运行时需要的包
-   pnpm add -w react react-dom
+   pnpm --filter @clear-vibe/web_extension add react react-dom
 
-   # Vite、React 插件和 React 类型，只在开发/构建阶段需要
-   pnpm add -w -D vite @vitejs/plugin-react @types/react @types/react-dom
+   # 扩展构建、React 编译及平台/UI 类型属于扩展应用
+   pnpm --filter @clear-vibe/web_extension add -D vite @vitejs/plugin-react @crxjs/vite-plugin @types/chrome @types/react @types/react-dom
 ```
 
-   **为什么**：`pnpm add` 同时做三件事：1. 下载包、2. 把包名与版本范围自动写进根 `package.json`、3. 解析精确版本后自动创建/更新 `pnpm-lock.yaml`。`-D` 表示开发依赖；`-w` 表示写入 workspace 根包，避免 pnpm 把它当作误操作拒绝。
+   **为什么**：TypeScript 是公共检查工具；React 与 React DOM 提供 UI 运行时；Vite 和 React 插件编译页面；CRXJS 管理扩展入口与热更新；类型包提供编译期 API 契约。`pnpm add` 更新所选包的依赖声明与锁文件，`-D` 表示开发依赖，`-w` 指定根包，`--filter` 指定工作区子包。安装由项目维护者执行，Agent 应先说明包的必要性并提供指令。
 
    **结果**：出现 `node_modules` 和 `pnpm-lock.yaml`。前者给本机编译使用；后者让其他电脑能安装相同的版本。`@types/chrome` 只提供 TypeScript 类型提示，不会安装 Chrome 浏览器。
 
@@ -112,9 +112,9 @@ pnpm --version
    pnpm exec tsc --init
 ```
 
-   然后按本 README 的“调整 tsconfig”章节，将模块解析设置为 `bundler`，并加入 `types: ["chrome"]`。
+   将公共类型规则放入 `tsconfig.base.json`，各包配置继承它；仅在扩展应用配置中声明 DOM、Chrome 和 React 类型。根 `tsconfig.json` 指向扩展应用配置，不替代核心包的独立检查。
 
-   **为什么**：这让编辑器和 TypeScript 知道代码运行在浏览器/Chrome 扩展中，能识别 `chrome.storage` 等 API；Vite 负责最终打包，不由 `tsc` 直接输出扩展。
+   **为什么**：扩展应用需要平台 API 类型，核心包则必须在无平台类型的环境下独立检查，避免误用宿主 API。Vite 负责最终打包，`tsc` 只检查类型。
 
    **结果**：出现 `tsconfig.json`，获得 TypeScript 检查与编辑器提示。
 
@@ -124,7 +124,7 @@ pnpm --version
    pnpm run build
 ```
 
-   **为什么**：根脚本最终调用 `vite build`，读取源码与 `vite.config.ts`，并将 `public` 中的静态文件（包括 `manifest.json`）带入输出目录，生成 Chrome 需要的静态文件。
+   **为什么**：根脚本最终调用 `vite build`；CRXJS 读取 Manifest 声明的入口并生成输出清单，Vite 编译页面与静态资源，生成 Chrome 需要的扩展文件。
 
    **结果**：出现 `apps/web_extension/dist`，可按后文的 Chrome 步骤加载。
 
@@ -142,7 +142,7 @@ pnpm install --frozen-lockfile
 pnpm run build
 ```
 
-第 1 步不会“猜测”或新增 React、Vite、TypeScript。它读取根 `package.json` 已经声明的依赖，以及 `pnpm-lock.yaml` 已锁定的精确版本，安装到 `node_modules`；同时识别各 workspace 子包并把 `workspace:*` 依赖链接到对应本地包。
+第 1 步不会“猜测”或新增 React、Vite、TypeScript。它读取根与各工作区 `package.json` 已经声明的依赖，以及 `pnpm-lock.yaml` 已锁定的精确版本，安装到 `node_modules`；同时识别各 workspace 子包并把 `workspace:*` 依赖链接到对应本地包。
 
 `--frozen-lockfile` 的含义是“锁文件不可改”。如果 `pnpm-lock.yaml` 缺失，或它与 `package.json` 不一致，命令会失败而不是悄悄升级依赖。遇到这种情况，应先确认依赖声明是否被有意修改；不要直接删除锁文件。
 
@@ -186,13 +186,13 @@ Test-Path .\apps\web_extension\dist\manifest.json
 
 #### 可选：`pnpm run dev` 是什么
 
-`pnpm run dev` 最终执行子包中的 `vite`，启动一个普通网页本地服务器，通常地址为 `http://localhost:5173`（端口被占用时会换用其他端口）。访问 `/` 时预览新标签页页面；访问 `/src/popup/popup.html` 时预览 Popup 页面。Vite 会按需编译 React/TypeScript，并在保存页面代码时自动刷新浏览器。
+`pnpm run dev` 最终执行子包中的 `vite`，启动 Vite 与 CRXJS 开发服务，并生成开发用 `apps/web_extension/dist`。保持服务运行，在 Chrome 中加载该目录后调试扩展，CRXJS 提供扩展入口的热更新支持。
 
-它不会生成 `dist`，也不是 Chrome 扩展运行环境。当前项目没有接入扩展专用热更新插件，因此 `pnpm run dev` 不会自动刷新已加载的扩展；依赖 `chrome.storage` 等扩展 API 的功能也应以“构建后在 Chrome 中加载”作为最终验证。若不需要单独调试纯 UI，可以完全不使用 `pnpm run dev`。
+开发服务的 HTTP 页面本身不是 Chrome 扩展环境，不能据此验证 `chrome.storage` 等平台功能。最终验证仍应停止开发服务、执行 `pnpm run build`，在 Chrome 中刷新扩展，并重新打开 Popup 或新标签页检查生产产物。
 
 
 ### 修改 package.json
-Node.js 默认把项目当成老式的 CommonJS 模块（使用 require()）。但是，我们的架构基于 Vite + React，并且 TS 开启了 verbatimModuleSyntax，这要求项目必须是现代的 ECMAScript 模块（ESM，使用 import/export）。
+本项目采用 ESM（`import` / `export`），通过 `package.json` 的 `"type": "module"` 明确模块格式。
 操作步骤：
 打开根目录的 `package.json`，在最外层设置 `"type": "module"`。pnpm 的 workspace 范围由根目录的 `pnpm-workspace.yaml` 配置，而不是 `package.json` 的 `workspaces` 字段。
 
@@ -201,7 +201,6 @@ Node.js 默认把项目当成老式的 CommonJS 模块（使用 require()）。�
 {
   // 其他 ...
 
-  "main": "index.js",
   "type": "module",
   
   // 其他 ...
@@ -217,23 +216,22 @@ packages:
 ```
 
 ### 调整 tsconfig
-在 Vite 环境下，项目是由 Bundler（打包器）来处理模块的，而不是由 Node.js 直接运行的。NodeNext 标准会强制进行非常复杂的 CommonJS/ESM 校验，导致 export class 被误判。
-修复步骤：
-我们需要把 TypeScript 的模块解析策略切换为现代前端 Vite 专用的 "bundler" 模式。这不仅能彻底解决这个报错，还能让你在写 import 语句时不需要加上扩展名（如 .ts 或 .js）。
-tsconfig.json，修改 "compilerOptions" 中的以下两行：
+应用源码由 Vite 打包，因此使用 `module: "ESNext"` 与 `moduleResolution: "bundler"`。这是与构建方式匹配的配置选择，不表示 NodeNext 本身会误判合法代码。
+
+公共规则位于 `tsconfig.base.json`，各核心包的 `tsconfig.json` 继承它且只包含本包源码；扩展应用配置另外声明平台与 UI 类型。根 `tsconfig.json` 指向扩展应用配置，`pnpm run typecheck` 则检查所有包。
 ```json
 {
   "compilerOptions": {
-    // 1. 将 "module": "nodenext" 改为：
+    // 应用源码采用 ESM，由 Vite 打包
     "module": "ESNext",
     
-    // 2. 新增下面这一行，告诉 TS 我们使用 Vite 等现代打包工具：
+    // 模块解析与打包器的处理方式匹配
     "moduleResolution": "bundler",
 
-    // ... 保持其他配置不变 ...
+    // 仅扩展应用配置声明宿主类型与 JSX
     "target": "esnext",
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
-    "types": ["chrome"],
+    "types": ["chrome", "vite/client"],
     "strict": true,
     "jsx": "react-jsx",
     "verbatimModuleSyntax": true,
@@ -251,7 +249,11 @@ tsconfig.json，修改 "compilerOptions" 中的以下两行：
 *   **`README.md` (本文档) 的角色**：**解释“是什么” (What) 与“怎么做” (How to develop)**。本文档聚焦于产品功能定义、用户场景 (User Cases)、演进路线，以及针对当前技术栈（React + Vite + MV3）的具体开发规约与契约。
 *   **与其他文档的边界**：关于项目物理目录树是如何划分的、为何采用 Monorepo 结构以及依赖注入的底层架构哲学，**严禁在本文档中赘述**，请移步阅读 `ARCHITECTURE.md`。
 
-## 1.1 核心功能详述平：是一款极简的沉浸式浏览器美化扩展。
+## 1. 产品目标与当前实现
+
+Clear Vibe 是一款极简的沉浸式浏览器美化扩展。当前 MVP 已支持 Popup 图片上传、特效参数调整及新标签页图片背景展示；尚未实现默认渐变背景、搜索框或 Google 搜索结果页注入。下述完整功能与用户场景描述产品目标，不表示全部已交付；本次架构整理不新增这些功能。
+
+### 核心功能目标
 **核心场景**：用户上传一张本地高清图片，插件接管浏览器的“新标签页”以及“Google 搜索结果页”。
 
 *   **功能一：沉浸式氛围背景 (Ambient Background)**
@@ -272,6 +274,8 @@ tsconfig.json，修改 "compilerOptions" 中的以下两行：
 ---
 
 ## 2. 用户场景 (Use Cases)
+
+以下是目标用户场景，当前实现范围以上文的 MVP 说明为准。
 
 *   **Use Case 1：首次安装与初始化**
     *   用户安装 Clear Vibe 后，打开新标签页，看到的是默认的轻量级氛围渐变背景和一个极简的 Google 搜索框。
@@ -302,26 +306,27 @@ Clear Vibe 的底层架构已为未来的功能演进做好了隔离铺垫，预
 为了保证 `packages/` 下的核心业务逻辑能在未来**直接被复用到桌面端（如 Electron/Tauri）或其他 Web 项目中，做到“一行核心代码不改”**，所有开发者必须严格签署并遵守以下开发契约：
 
 ### 4.1 构建基建契约 (Build System)
-*   **Vite MV3 插件**：在 `apps/web-extension` 的开发中，**必须使用 `@crxjs/vite-plugin`**（或类似成熟方案）来处理 Manifest V3 的多入口打包与热更新 (HMR)。严禁手写极其复杂的 Rollup 脚本去强行打包 Content Script，保持构建配置的简单可维护。
+*   **Vite MV3 插件**：`apps/web_extension` 使用 `@crxjs/vite-plugin` 处理 Manifest V3 入口与热更新 (HMR)。入口路径统一声明在 `public/manifest.json`，不再额外维护 Rollup 多入口表。
 
 ### 4.2 绝对的“平台无关”与适配器契约 (The Adapter Rule)
 这是保证项目“基础框架通用性”的生死线。
 *   **核心逻辑（packages）的无知性**：`packages/` 里面的代码是一台“不带电源插头的咖啡机”。它只定义数据的处理规则（比如怎么计算透明度，怎么压缩图片），但**绝对不允许**直接调用任何平台专属的方法（如 `window`, `chrome.storage`, `document`）。
 *   **执行工具由 App 传入**：
-    *   如果在 Chrome 插件 (`apps/web-extension`) 里使用核心存储包 `core-storage`，那么必须在 App 这一层手写一个基于 `chrome.storage` 的工具函数，通过参数**传递（注入）**给 `core-storage` 去执行。
-    *   未来如果在桌面端使用，桌面端 App 就会传一个基于本地硬盘读写的工具函数给它。核心逻辑完全不用改。
+    *   Chrome 扩展的 App 层为 `core_settings` 注入基于 `chrome.storage.local` 的配置适配器，为 `core_storage` 注入基于 IndexedDB 的图片适配器。Content Script 读取扩展图片时使用只读远程适配器，由后台完成实际读取。
+    *   未来桌面端 App 可注入实现同一能力接口的本地存储适配器，核心逻辑不依赖具体平台实现。
 
 
 ### 4.3 强契约与错误处理 (Strict Type & Error Handling)
 *   所有数据的读写必须通过明确的 TypeScript Interface 定义。
 *   **严禁滥用 `.get(key, defaultValue)` 模式掩盖数据缺失**。例如，如果获取用户的特效配置失败，不要静默返回一个 `{ opacity: 0.5 }`，必须抛出明确的运行时错误（Throw Error），利用严格的强契约在开发阶段把 Bug 暴露出来。
+*   **初始化与异常分开**：首次使用、尚无配置时，返回明确约定的默认配置；读取失败、已有配置无效，或已配置的图片不存在时，必须暴露错误，不以默认数据掩盖。
 
 ### 4.4 避免过度工程化与兜底
 *   代码内容不能出现过度工程化，引入复杂而无意义内容，以最小实现为原则，避免琐碎的 helper 以及模块
-*   代码内同允许兜底，但本项目不是给第三方二开使用，每个函数，模块各司其职，不要引入无限过度繁琐的兜底策略。
+*   每个函数与模块各司其职，只处理明确需要的状态，不引入过度繁琐的兜底策略，不通过静默回退掩盖契约错误。
 
 ### 4.5 构建与 UI 契约 (Build & UI Limits)
-*   **React 的禁区**：React 及其相关生态仅仅是 UI 呈现工具，**绝对只能**存在于 `apps/` 的入口文件（Popup, New Tab）中。严禁将任何 React 组件写进 `packages/` 里。
+*   **React 的边界**：React 及其相关生态仅用于 `apps/` 中 Popup、新标签页的 UI 层，包括入口及其 UI 组件。严禁将 React 组件或 Hook 写进 `packages/`。
 
 
 ## 开发进度

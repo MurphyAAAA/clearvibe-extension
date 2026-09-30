@@ -7,6 +7,6 @@
     "default_popup": "src/popup/popup.html"
   },
   "chrome_url_overrides": {
-    "newtab": "index.html"
+    "newtab": "src/new_tab/new_tab.html"
   }
 }

@@ -1,13 +1,13 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { MvpApp } from './NewTabApp';
+import { NewTabApp } from './new_tab_app';
 
 const rootElement = document.getElementById('root');
 if (rootElement) {
     const root = createRoot(rootElement);
     root.render(
         <React.StrictMode>
-            <MvpApp />
+            <NewTabApp />
         </React.StrictMode>
     );
 }

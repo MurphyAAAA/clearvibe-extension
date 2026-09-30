@@ -1,0 +1,5 @@
+{
+  // 特效计算不引入 DOM 或 React 类型。
+  "extends": "../../tsconfig.base.json",
+  "include": ["src"]
+}

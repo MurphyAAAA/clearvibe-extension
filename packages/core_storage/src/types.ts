@@ -5,10 +5,29 @@
 
 
 /**
- * 【核心适配器契约】：图片大文件存储适配器
- * 宿主环境（Chrome/桌面端）必须实现此接口，内部可以封装 IndexedDB 或 File System
+ * 【核心适配器契约】：图片读取适配器
+ *
+ * 该最小能力供只需要读取图片的调用方使用。具体宿主可以通过数据库、
+ * 文件系统或进程间消息实现它，核心层不感知实际存储位置和通信方式。
  */
-export interface IImageStorageAdapter {
+export interface IImageReaderAdapter {
+    /**
+     * 根据 ID 获取图片数据
+     * 为了遵守“避免静默失败”的强契约原则，若图片不存在，必须抛出 Error，
+     * 而不是返回空字符串。
+     * @param imageId 图片唯一标识
+     * @returns 图片的 Base64 Data URI 字符串
+     */
+    getImage(imageId: string): Promise<string>;
+}
+
+/**
+ * 【核心适配器契约】：图片完整存储适配器
+ *
+ * 完整存储能力建立在读取能力之上，供同时需要读取和保存图片的调用方使用。
+ * 保留原接口名称，避免影响现有调用方。
+ */
+export interface IImageStorageAdapter extends IImageReaderAdapter {
     /**
      * 存入用户上传的背景图
      * @param imageId 图片的唯一标识（通常可由时间戳或 UUID 生成）
@@ -16,12 +35,4 @@ export interface IImageStorageAdapter {
      * @returns 成功则 resolve，失败抛出明确错误
      */
     saveImage(imageId: string, base64Data: string): Promise<void>;
-
-    /**
-     * 根据 ID 获取图片数据
-     * 为了遵守"避免静默失败"的强契约原则，若图片不存在，必须抛出 Error，而不是返回空字符串
-     * @param imageId 图片唯一标识
-     * @returns 图片的 Base64 字符串
-     */
-    getImage(imageId: string): Promise<string>;
 }

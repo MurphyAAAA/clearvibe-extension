@@ -1,0 +1,34 @@
+/* 新标签页静态布局；动态壁纸与遮罩仍由特效引擎计算并通过 style 挂载。 */
+html,
+body {
+    margin: 0;
+    padding: 0;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+}
+
+#root {
+    width: 100%;
+    height: 100%;
+}
+
+.new_tab_loading {
+    padding: 20px;
+    color: #fff;
+}
+
+.new_tab_background {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    background-color: #121212;
+    z-index: 0;
+}
+
+.new_tab_empty_message {
+    color: #666;
+    text-align: center;
+    padding-top: 40vh;
+    font-family: sans-serif;
+}

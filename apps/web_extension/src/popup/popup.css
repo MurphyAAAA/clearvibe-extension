@@ -1,0 +1,78 @@
+/* Popup 和独立设置页共用的静态样式，保持原有宽度、布局与控件外观。 */
+html,
+body {
+    margin: 0;
+    padding: 0;
+    width: 320px;
+    font-family: sans-serif;
+    background-color: #f5f5f5;
+}
+
+#root {
+    width: 100%;
+    height: 100%;
+}
+
+.popup_loading {
+    padding: 20px;
+}
+
+.popup_settings {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.popup_header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.popup_title {
+    margin: 0;
+    color: #333;
+}
+
+.popup_open_tab_button {
+    font-size: 11px;
+    padding: 4px 8px;
+    background: #1677ff;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.popup_upload_label,
+.popup_parameter_label {
+    display: block;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.popup_upload_label {
+    margin-bottom: 5px;
+}
+
+.popup_upload_input,
+.popup_parameter_slider {
+    width: 100%;
+}
+
+.popup_upload_input {
+    font-size: 12px;
+}
+
+.popup_reset_button {
+    margin-top: 10px;
+    padding: 8px;
+    background: #ff4d4f;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}

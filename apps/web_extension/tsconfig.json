@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    // 平台与 UI 类型仅属于宿主，不进入纯核心包的类型环境。
+    "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "types": ["chrome", "vite/client"],
+    "jsx": "react-jsx",
+    "esModuleInterop": true,
+    "resolveJsonModule": true
+  },
+  "include": ["src", "vite.config.ts"]
+}

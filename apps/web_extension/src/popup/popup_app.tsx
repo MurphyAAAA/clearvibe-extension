@@ -1,4 +1,4 @@
-/** apps/web_extension/src/popup/PopupApp.tsx */
+/** Popup 宿主组件：处理图片上传、配置编辑与独立设置页入口。 */
 import React, { useEffect, useState } from 'react';
 import { SettingsManager, type VibeConfig } from '@clear-vibe/core_settings';
 import { StorageManager } from '@clear-vibe/core_storage';
@@ -58,7 +58,7 @@ export const PopupApp: React.FC = () => {
     };
 
     const handleReset = async () => {
-        // 重置时存入包含空 imageId 的默认结构
+        // 保留现有参数，只清空当前壁纸引用；不删除图片资产或恢复默认参数。
         const defaultConfig = await settingsManager.getConfig();
         const resetConfig: VibeConfig = { ...defaultConfig, imageId: '' };
         await settingsManager.saveConfig(resetConfig);
@@ -73,55 +73,55 @@ export const PopupApp: React.FC = () => {
         }
     };
 
-    if (loading) return <div style={{ padding: '20px' }}>Loading...</div>;
+    if (loading) return <div className="popup_loading">Loading...</div>;
 
     return (
-        <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '15px', maxWidth: '400px', margin: '0 auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <h3 style={{ margin: 0, color: '#333' }}>Clear Vibe 设置</h3>
+        <div className="popup_settings">
+            <div className="popup_header">
+                <h3 className="popup_title">Clear Vibe 设置</h3>
                 {/* 核心体验救星：点击可在独立 Tab 打开，彻底解决上传选择框强杀弹窗的问题 */}
                 <button 
                     onClick={handleOpenInFullTab} 
-                    style={{ fontSize: '11px', padding: '4px 8px', background: '#1677ff', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                    className="popup_open_tab_button"
                 >
                     全屏独立设置 ↗
                 </button>
             </div>
             
             <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>
+                <label className="popup_upload_label">
                     1. 选择/更换背景图
                 </label>
-                <input type="file" accept="image/*" onChange={handleImageUpload} style={{ width: '100%', fontSize: '12px' }} />
+                <input type="file" accept="image/*" onChange={handleImageUpload} className="popup_upload_input" />
             </div>
 
             <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold' }}>
+                <label className="popup_parameter_label">
                     2. 中心透明度: {config?.centerOpacity.toFixed(2)}
                 </label>
                 <input 
                     type="range" min="0" max="1" step="0.05" 
                     value={config?.centerOpacity}
                     onChange={(e) => handleConfigChange({ ...config!, centerOpacity: parseFloat(e.target.value) })}
-                    style={{ width: '100%' }}
+                    className="popup_parameter_slider"
                 />
             </div>
 
             <div>
-                <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold' }}>
+                <label className="popup_parameter_label">
                     3. 扩散半径: {config?.spreadRadius}%
                 </label>
                 <input 
                     type="range" min="0" max="100" step="1" 
                     value={config?.spreadRadius}
                     onChange={(e) => handleConfigChange({ ...config!, spreadRadius: parseFloat(e.target.value) })}
-                    style={{ width: '100%' }}
+                    className="popup_parameter_slider"
                 />
             </div>
 
             <button 
                 onClick={handleReset}
-                style={{ marginTop: '10px', padding: '8px', background: '#ff4d4f', color: '#fff', border: 'none', borderRadius: '4px', cursor: 'pointer' }}
+                className="popup_reset_button"
             >
                 清除壁纸与配置
             </button>

@@ -1,7 +1,7 @@
-/** apps/web_extension/src/new_tab/NewTabApp.tsx */
+/** 新标签页宿主组件：组装配置、只读图片能力与特效计算，并呈现结果。 */
 import React, { useEffect, useState } from 'react';
 import { SettingsManager, type VibeConfig } from '@clear-vibe/core_settings';
-import { StorageManager } from '@clear-vibe/core_storage';
+import { ImageReader } from '@clear-vibe/core_storage';
 import { VibeEffectEngine } from '@clear-vibe/vibe_effects';
 import { ChromeSettingsAdapter } from '../adapters/settings_adapter';
 import { IndexedDbImageAdapter } from '../adapters/image_adapter';
@@ -13,12 +13,13 @@ const settingsAdapter = new ChromeSettingsAdapter();
 const imageAdapter = new IndexedDbImageAdapter();
 
 const settingsManager = new SettingsManager(settingsAdapter);
-const storageManager = new StorageManager(imageAdapter);
+// 新标签页只消费图片读取能力，不持有图片保存接口。
+const imageReader = new ImageReader(imageAdapter);
 const effectEngine = new VibeEffectEngine();
 
 
 
-export const MvpApp: React.FC = () => {
+export const NewTabApp: React.FC = () => {
     // ==========================================
     // 2. UI 状态管理
     // ==========================================
@@ -34,8 +35,8 @@ export const MvpApp: React.FC = () => {
             return;
         }
         try{
-            // 通过 StorageManager 提取大图数据
-            const base64Data = await storageManager.getImage(currentConfig.imageId);
+            // 通过只读业务管家提取图片，存储位置仍由宿主适配器决定。
+            const base64Data = await imageReader.getImage(currentConfig.imageId);
             const styles = effectEngine.generateEffectStyles({
                 imageUrl: base64Data,
                 centerOpacity: currentConfig.centerOpacity,
@@ -45,7 +46,7 @@ export const MvpApp: React.FC = () => {
             setEffectStyles(styles);
             setHasValidImage(true);
         } catch (error) {
-            console.error('[NewTab] Image fetch failed via StorageManager:', error);
+            console.error('[NewTab] Image fetch failed via ImageReader:', error);
             setHasValidImage(false);
         }
     };
@@ -75,18 +76,18 @@ export const MvpApp: React.FC = () => {
     }, []);
 
     
-    if (loading) return <div style={{ padding: '20px', color: '#fff' }}>Loading Vibe...</div>;
+    if (loading) return <div className="new_tab_loading">Loading Vibe...</div>;
 
     // ==========================================
     // 5. 渲染视图：绝对解耦，React 只负责挂载计算出的 CSS
     // ==========================================
     return (
-        <div style={{ position: 'relative', width: '100%', height: '100vh', backgroundColor: '#121212', zIndex: 0 }}>
+        <div className="new_tab_background">
             {/* 绝对解耦：只呈现效果，无任何交互 UI */}
             {hasValidImage ? (
                 <div style={effectStyles}></div>
             ) : (
-                <div style={{ color: '#666', textAlign: 'center', paddingTop: '40vh', fontFamily: 'sans-serif' }}>
+                <div className="new_tab_empty_message">
                     请点击扩展图标设置你的 Clear Vibe
                 </div>
             )}

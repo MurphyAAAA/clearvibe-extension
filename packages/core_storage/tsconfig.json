@@ -1,0 +1,5 @@
+{
+  // 图片契约与业务管家不依赖任何宿主 API。
+  "extends": "../../tsconfig.base.json",
+  "include": ["src"]
+}
