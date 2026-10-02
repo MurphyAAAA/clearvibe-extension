@@ -3,6 +3,25 @@
   "name": "Clear Vibe MVP",
   "version": "1.0",
   "permissions": ["storage"],
+  "background": {
+    "service_worker": "src/background/service_worker.ts",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.google.com/",
+        "https://www.google.com/?*",
+        "https://www.google.com/webhp",
+        "https://www.google.com/webhp?*",
+        "https://www.google.com/search",
+        "https://www.google.com/search?*"
+      ],
+      "js": ["src/content_script/google_content_script.ts"],
+      "css": ["src/content_script/google_content_script.css"],
+      "run_at": "document_end"
+    }
+  ],
   "action": {
     "default_popup": "src/popup/popup.html"
   },

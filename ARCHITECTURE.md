@@ -33,7 +33,7 @@
 宏观上划分为 `apps/`（宿主环境）和 `packages/`（可复用核心能力）两大部分。
 **以下为目标职责与目录结构，不表示所有文件已经实现，也不要求创建空文件占位。新增文件必须先讨论确认，未经讨论严禁擅自新增根级目录。**
 
-当前 MVP 只有 Popup 与新标签页两个入口，已使用 CRXJS 构建和分包 TypeScript 配置。Content Script 与后台 Service Worker 尚未实现，远程图片适配器已定义但尚未接入运行入口。下面标明规划部分的结构不要求占位实现，也不授权新增产品功能。
+当前已实现 Popup、新标签页、Google 页面 Content Script 与后台 Service Worker 四个入口，使用 CRXJS 构建和分包 TypeScript 配置。Google 主页与搜索结果页复用同一内容脚本，通过远程图片适配器读取后台图片。下面标明规划部分的结构不要求占位实现，也不授权新增产品功能。
 
 ```text
 clear-vibe/
@@ -54,7 +54,7 @@ clear-vibe/
 │       │   │   ├── new_tab_app.tsx         # React 根组件 (在此调用 packages 的能力)
 │       │   │   └── new_tab.css            # 该入口专属全局样式
 │       │   │
-│       │   ├── content_script/            # 【规划入口 2】注入 Google 网页的脚本 (无 React UI，纯 DOM 操作)
+│       │   ├── content_script/            # 【入口 2】注入 Google 主页与搜索结果页的脚本 (无 React UI，纯 DOM 操作)
 │       │   │   ├── google_content_script.ts # 核心注入逻辑 (调用 packages/vibe_effects)
 │       │   │   └── google_content_script.css# 注入到目标网页的纯净样式
 │       │   │
@@ -64,7 +64,7 @@ clear-vibe/
 │       │   │   ├── popup_app.tsx           # React 根组件 (设置面板、图片上传 UI)
 │       │   │   └── popup.css              # 弹窗专属样式
 │       │   │
-│       │   └── background/                # 【规划入口 4】MV3 后台 Service Worker
+│       │   └── background/                # 【入口 4】MV3 后台 Service Worker
 │       │       └── service_worker.ts      # 处理扩展级事件与图片读取消息，无 DOM 访问权限
 │       │
 │       ├── vite.config.ts                 # Vite 构建配置 (集成 @crxjs/vite-plugin，免手动配置 Rollup 多入口)

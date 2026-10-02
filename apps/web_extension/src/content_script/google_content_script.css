@@ -1,0 +1,16 @@
+/* 创建独立堆叠上下文：负层级壁纸位于 body 底色之上、搜索内容之下。
+   保留 Google 的明暗主题底色与文字颜色，不对结果卡片或弹出菜单做全局透明化。 */
+body.clear_vibe_google_active {
+    isolation: isolate;
+}
+
+#clear_vibe_google_background {
+    pointer-events: none;
+}
+
+/* 搜索页页脚和主页 contentinfo 容器具有独立底色。
+   仅在图片成功加载后透明化这两个结构容器，清空图片后恢复原站样式。 */
+body.clear_vibe_google_active #fbar,
+body.clear_vibe_google_active [role="contentinfo"] {
+    background-color: transparent !important;
+}
